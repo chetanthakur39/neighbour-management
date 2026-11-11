@@ -80,3 +80,21 @@ The Spring Boot API, MySQL database, and PyTorch chatbot are separate services a
 - Virtual environments, dependencies, build output, and local environment files are excluded from Git.
 - The trained checkpoint is `neighbour-ai/model/intent_model.pth`.
 - The chatbot training and evaluation JSON data files were unavailable from OneDrive during this copy. They are not needed for model inference.
+## Live deployment (frontend + API + chatbot)
+
+The Vercel deployment hosts the frontend. The Spring Boot API, MySQL database, and Python/PyTorch chatbot run as separate persistent services on Railway. The `Dockerfile` files in the API and chatbot directories are prepared for Railway's monorepo deployment flow.
+
+### Railway services
+
+In a Railway project connected to this GitHub repository, create a MySQL database and two services from the same repo:
+
+1. API service root directory: `/neighbour-management-backend` (Railway detects its `Dockerfile`).
+2. Chatbot service root directory: `/neighbour-ai` (Railway detects its `Dockerfile`).
+3. Add a public domain to each HTTP service. Set the API `DB_URL` to the JDBC URL built from the Railway MySQL host, port, and database name; set `DB_USERNAME` and `DB_PASSWORD` from the MySQL service variables. Keep these secrets in Railway variables, never Git.
+4. Set the API `APP_CORS_ALLOWED_ORIGINS` to `https://neighbour-management.vercel.app`.
+5. Set chatbot `NEIGHBOUR_API_BASE_URL` to the API's public URL ending in `/api`.
+6. In the Vercel project, set `VITE_API_BASE_URL` to the public API URL ending in `/api`, and `VITE_AI_CHAT_URL` to the chatbot public URL ending in `/chat`. Redeploy the Vercel frontend after adding these build-time variables.
+
+The API currently uses Hibernate `ddl-auto=update`, which creates/updates schema on startup. It does not migrate an existing local MySQL database or its records; move production data separately if required.
+
+The chatbot only needs the committed tokenizer and model checkpoint for inference. Training and evaluation datasets are not required to serve chat requests.
